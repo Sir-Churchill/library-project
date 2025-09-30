@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="Book",
+            name="Borrowing",
             fields=[
                 (
                     "id",
@@ -22,14 +22,14 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
-                ("title", models.CharField(max_length=255)),
-                ("author", models.CharField(max_length=255)),
-                (
-                    "cover",
-                    models.CharField(choices=[("SOFT", "Soft"), ("HARD", "Hard")]),
-                ),
-                ("inventory", models.PositiveIntegerField()),
-                ("daily_fee", models.DecimalField(decimal_places=2, max_digits=10)),
+                ("borrow_date", models.DateField(auto_now_add=True)),
+                ("expected_return", models.DateField()),
+                ("actual_return_date", models.DateField(blank=True, null=True)),
+                ("book_id", models.IntegerField()),
+                ("user_id", models.IntegerField()),
             ],
+            options={
+                "ordering": ["borrow_date"],
+            },
         ),
     ]
