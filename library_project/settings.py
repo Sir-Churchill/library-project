@@ -76,6 +76,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "library_project.wsgi.application"
 
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
