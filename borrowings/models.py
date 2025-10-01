@@ -1,7 +1,4 @@
 from django.db import models
-from rest_framework.exceptions import ValidationError
-
-from books.models import Book
 
 
 class Borrowing(models.Model):
@@ -16,19 +13,3 @@ class Borrowing(models.Model):
 
     class Meta:
         ordering = ["borrow_date"]
-
-    def clean(self):
-        if self.expected_return < self.borrow_date:
-            raise ValidationError(
-                "Expected return date cannot be earlier than borrow date"
-            )
-        if self.book_id:
-            try:
-                book = Book.objects.get(pk=self.book_id)
-            except Book.DoesNotExist:
-                raise ValidationError("Book does not exist")
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-
-        return super(Borrowing, self).save(*args, **kwargs)
