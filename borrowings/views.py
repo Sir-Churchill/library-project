@@ -21,7 +21,7 @@ class BorrowingView(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
 ):
-    queryset = Borrowing.objects.all()
+    queryset = Borrowing.objects.all().prefetch_related("books")
     serializer_class = BorrowingSerializer
 
     def get_serializer_class(self):
@@ -44,7 +44,7 @@ class BorrowingView(
         if self.request.user.is_staff:
             if user_id:
                 user_ids = self._params_to_ints(user_id)
-                queryset = queryset.filter(user_id__in=user_ids)
+                queryset = queryset.filter(user__in=user_ids)
 
             if is_active:
                 if is_active.lower() == "true":
@@ -54,49 +54,47 @@ class BorrowingView(
 
             return queryset
 
-        return queryset.filter(user_id=self.request.user.id)
+        return queryset.filter(user=self.request.user)
 
     def create(self, request, *args, **kwargs):
         serializer = BorrowingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        book_ids = request.data.get("books")
+        books = Book.objects.select_for_update().filter(id__in=book_ids)
 
-        book_id = serializer.validated_data["book_id"]
-        book = Book.objects.select_for_update().get(pk=book_id)
         with transaction.atomic():
-            if book.inventory <= 0:
-                raise ValidationError("This book is out of stock")
 
-            book.inventory -= 1
-            book.save()
+            for book in books:
+                if Borrowing.objects.filter(
+                    user=request.user, books=book, actual_return_date__isnull=True
+                ).exists():
+                    raise ValidationError(f"You already borrowed {book.title}")
+                if book.inventory <= 0:
+                    raise ValidationError(f"{book.title} is out of stock")
 
-            if Borrowing.objects.filter(
-                user_id=request.user.id,
-                book_id=book_id,
-                actual_return_date__isnull=True,
-            ).exists():
-                raise ValidationError(
-                    "You already borrowed this book and haven't returned it yet."
-                )
-            else:
-                serializer.save(user_id=request.user.id)
+            borrowing_instance = serializer.save(user=request.user)
+            borrowing_instance.books.set(books)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            for book in books:
+                book.inventory -= 1
+                book.save()
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        serializer.save(user_id=user.id)
+        return Response(
+            BorrowingSerializer(borrowing_instance).data, status=status.HTTP_201_CREATED
+        )
 
 
 @api_view(["POST"])
 def return_book(request, pk):
     borrowing = Borrowing.objects.select_for_update().get(pk=pk)
-    book = Book.objects.select_for_update().get(id=borrowing.book_id)
+    books = Book.objects.select_for_update()
 
     if borrowing.actual_return_date is None:
 
         with transaction.atomic():
-            book.inventory += 1
-            book.save()
+            for book in books:
+                book.inventory += 1
+                book.save()
             borrowing.actual_return_date = date.today()
             borrowing.save()
 
