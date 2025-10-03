@@ -2,10 +2,12 @@ from datetime import date
 from rest_framework import serializers
 
 from books.models import Book
+from books.serializers import BookListSerializer, BookDetailSerializer
 from borrowings.models import Borrowing
 
 
 class BorrowingSerializer(serializers.ModelSerializer):
+    books = serializers.PrimaryKeyRelatedField(many=True, queryset=Book.objects.all())
 
     class Meta:
         model = Borrowing
@@ -14,7 +16,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
             "borrow_date",
             "expected_return",
             "actual_return_date",
-            "book_id",
+            "books",
         )
 
     def validate(self, data):
@@ -30,30 +32,19 @@ class BorrowingSerializer(serializers.ModelSerializer):
                 }
             )
 
-        book_id = data.get("book_id") or getattr(self.instance, "book_id", None)
-        if book_id and not Book.objects.filter(pk=book_id).exists():
-            raise serializers.ValidationError({"book_id": "Book does not exist."})
-
         return data
 
 
 class BorrowingListSerializer(serializers.ModelSerializer):
-    book = serializers.SerializerMethodField()
+    books = BookListSerializer(read_only=True, many=True)
 
     class Meta:
         model = Borrowing
-        fields = ("id", "borrow_date", "expected_return", "actual_return_date", "book")
-
-    def get_book(self, obj):
-        book = Book.objects.get(pk=obj.book_id)
-        return {
-            "id": book.id,
-            "title": book.title,
-        }
+        fields = ("id", "borrow_date", "expected_return", "actual_return_date", "books")
 
 
 class BorrowingDetailSerializer(serializers.ModelSerializer):
-    book = serializers.SerializerMethodField()
+    books = BookDetailSerializer(read_only=True, many=True)
 
     class Meta:
         model = Borrowing
@@ -62,16 +53,6 @@ class BorrowingDetailSerializer(serializers.ModelSerializer):
             "borrow_date",
             "expected_return",
             "actual_return_date",
-            "book",
-            "user_id",
+            "books",
+            "user",
         )
-
-    def get_book(self, obj):
-        book = Book.objects.get(pk=obj.book_id)
-        return {
-            "id": book.id,
-            "title": book.title,
-            "author": book.author,
-            "cover": book.cover,
-            "daily_fee": book.daily_fee,
-        }
