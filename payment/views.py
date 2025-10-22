@@ -1,5 +1,5 @@
 import stripe
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework import mixins
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -42,23 +42,36 @@ class PaymentCheckoutView(APIView):
         borrowing_id = self.kwargs["borrowing_id"]
         stripe.api_key = settings.STRIPE_SECRET_KEY
 
-        borrowing = Borrowing.objects.get(id=borrowing_id)
-        book = borrowing.books.first()
+        try:
+            borrowing = Borrowing.objects.get(id=borrowing_id)
+        except Borrowing.DoesNotExist:
+            return Response(
+                {"detail": "Borrowing not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
-        DOMAIN = "http://127.0.0.1:8000"
+        book = borrowing.book
+
+        days = (borrowing.expected_return - borrowing.borrow_date).days + 1
+        if days <= 0:
+            days = 1
+
+        amount_cents = int(book.daily_fee * days * 100)
+
+        DOMAIN = settings.DOMAIN
+
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[
                 {
                     "price_data": {
                         "currency": "USD",
-                        "unit_amount": int(book.daily_fee * 100),
+                        "unit_amount": amount_cents,
                         "product_data": {
                             "name": book.title,
                         },
                     },
                     "quantity": 1,
-                },
+                }
             ],
             mode="payment",
             success_url=f"{DOMAIN}/api/payments/success/?session_id={{CHECKOUT_SESSION_ID}}",
@@ -75,7 +88,7 @@ class PaymentCheckoutView(APIView):
             borrowing=borrowing,
             session_url=checkout_session.url,
             session_id=checkout_session.id,
-            money_to_pay=book.daily_fee,
+            money_to_pay=book.daily_fee * days,
         )
 
         return Response(
