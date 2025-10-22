@@ -4,10 +4,10 @@ from rest_framework import serializers
 from books.models import Book
 from books.serializers import BookListSerializer, BookDetailSerializer
 from borrowings.models import Borrowing
+from payment.serializers import PaymentListSerializer
 
 
 class BorrowingSerializer(serializers.ModelSerializer):
-    books = serializers.PrimaryKeyRelatedField(many=True, queryset=Book.objects.all())
 
     class Meta:
         model = Borrowing
@@ -16,7 +16,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
             "borrow_date",
             "expected_return",
             "actual_return_date",
-            "books",
+            "book",
         )
 
     def validate(self, data):
@@ -36,15 +36,16 @@ class BorrowingSerializer(serializers.ModelSerializer):
 
 
 class BorrowingListSerializer(serializers.ModelSerializer):
-    books = BookListSerializer(read_only=True, many=True)
+    book = BookListSerializer(read_only=True)
 
     class Meta:
         model = Borrowing
-        fields = ("id", "borrow_date", "expected_return", "actual_return_date", "books")
+        fields = ("id", "borrow_date", "expected_return", "actual_return_date", "book")
 
 
 class BorrowingDetailSerializer(serializers.ModelSerializer):
-    books = BookDetailSerializer(read_only=True, many=True)
+    book = BookDetailSerializer(read_only=True)
+    payment = PaymentListSerializer(read_only=True, many=True)
 
     class Meta:
         model = Borrowing
@@ -53,6 +54,7 @@ class BorrowingDetailSerializer(serializers.ModelSerializer):
             "borrow_date",
             "expected_return",
             "actual_return_date",
-            "books",
+            "book",
+            "payment",
             "user",
         )
