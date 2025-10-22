@@ -8,7 +8,7 @@ class Borrowing(models.Model):
     borrow_date = models.DateField(auto_now_add=True)
     expected_return = models.DateField()
     actual_return_date = models.DateField(blank=True, null=True)
-    books = models.ManyToManyField(Book, related_name="books")
+    book = models.ForeignKey(Book, related_name="book", on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
