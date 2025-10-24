@@ -5,6 +5,6 @@ urlpatterns = [
     path("api/v1/", include("books.urls", namespace="books")),
     path("api/v2/", include("borrowings.urls", namespace="borrowings")),
     path("api/users/", include("users.urls", namespace="users")),
-    path("api/payments/", include("payment.urls", namespace="payments")),
+    path("api/payments/", include("payment.urls", namespace="payment")),
     path("admin/", admin.site.urls),
 ]
