@@ -1,9 +1,10 @@
 from datetime import date
 
 from django.db import transaction
-from rest_framework import status, mixins, viewsets
-from rest_framework.decorators import api_view
+from rest_framework import status, mixins, viewsets, permissions
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from books.models import Book
@@ -25,7 +26,7 @@ class BorrowingView(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
 ):
-    queryset = Borrowing.objects.all().prefetch_related("books")
+    queryset = Borrowing.objects.all().select_related("book")
     serializer_class = BorrowingSerializer
 
     def get_serializer_class(self):
@@ -86,6 +87,11 @@ class BorrowingView(
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+    def get_permissions(self):
+        if self.action in ["list", "retrieve", "create"]:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAdminUser()]
+
 
 def calculate_fine(borrowing):
     if borrowing.actual_return_date is None:
@@ -99,6 +105,7 @@ def calculate_fine(borrowing):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def return_book(request, pk):
     borrowing = Borrowing.objects.select_for_update().get(pk=pk)
     book = borrowing.book
@@ -124,7 +131,7 @@ def return_book(request, pk):
                 status=Payment.PaymentStatus.PENDING,
                 money_to_pay=fine_amount,
             )
-            fine_payment_url = create_payment_session(fine_payment)
+            fine_payment_url = create_payment_session(fine_payment.borrowing)
 
         serializer = BorrowingSerializer(borrowing)
         data = serializer.data
