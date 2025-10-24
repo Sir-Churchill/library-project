@@ -8,7 +8,7 @@ def create_payment_session(borrowing):
     book = borrowing.book
 
     days = (borrowing.expected_return - borrowing.borrow_date).days
-    total_amount = book.daily_fee * days
+    total_amount = int(float(book.daily_fee) * days * 100)
 
     DOMAIN = settings.DOMAIN
 
@@ -19,9 +19,7 @@ def create_payment_session(borrowing):
                 "price_data": {
                     "currency": "USD",
                     "unit_amount": total_amount,
-                    "product_data": {
-                        "name": book.title,
-                    },
+                    "product_data": {"name": book.title},
                 },
                 "quantity": 1,
             },
@@ -35,13 +33,14 @@ def create_payment_session(borrowing):
         },
     )
 
-    Payment.objects.create(
-        status=Payment.PaymentStatus.PENDING,
-        type=Payment.Type.PAYMENT,
+    payment = Payment.objects.create(
         borrowing=borrowing,
-        session_url=checkout_session.url,
-        session_id=checkout_session.id,
-        money_to_pay=total_amount,
+        type=Payment.Type.PAYMENT,
+        status=Payment.PaymentStatus.PENDING,
+        money_to_pay=total_amount / 100,
     )
+    payment.session_id = checkout_session.id
+    payment.session_url = checkout_session.url
+    payment.save()
 
     return checkout_session.url
