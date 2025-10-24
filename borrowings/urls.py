@@ -10,5 +10,5 @@ router.register("borrowings", BorrowingView)
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("borrowings/<int:pk>/return/", return_book, name="return_book"),
+    path("borrowings/<int:pk>/return/", return_book, name="return-book"),
 ]
