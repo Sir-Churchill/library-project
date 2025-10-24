@@ -1,6 +1,7 @@
 import stripe
 from rest_framework import viewsets, status
 from rest_framework import mixins
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from borrowings.models import Borrowing
@@ -38,6 +39,8 @@ class PaymentGenericView(
 
 
 class PaymentCheckoutView(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def post(self, request, *args, **kwargs):
         borrowing_id = self.kwargs["borrowing_id"]
         stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -51,11 +54,7 @@ class PaymentCheckoutView(APIView):
 
         book = borrowing.book
 
-        days = (borrowing.expected_return - borrowing.borrow_date).days + 1
-        if days <= 0:
-            days = 1
-
-        amount_cents = int(book.daily_fee * days * 100)
+        days = max(1, (borrowing.expected_return - borrowing.borrow_date).days)
 
         DOMAIN = settings.DOMAIN
 
@@ -65,7 +64,7 @@ class PaymentCheckoutView(APIView):
                 {
                     "price_data": {
                         "currency": "USD",
-                        "unit_amount": amount_cents,
+                        "unit_amount": int(float(book.daily_fee) * days * 100),
                         "product_data": {
                             "name": book.title,
                         },
@@ -97,6 +96,8 @@ class PaymentCheckoutView(APIView):
 
 
 class PaymentSuccessView(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request):
         session_id = request.query_params.get("session_id")
         if not session_id:
@@ -118,6 +119,8 @@ class PaymentSuccessView(APIView):
 
 
 class PaymentCanceledView(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request):
         session_id = request.query_params.get("session_id")
         if not session_id:
