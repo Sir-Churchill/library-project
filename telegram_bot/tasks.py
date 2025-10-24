@@ -12,7 +12,7 @@ def send_reminder():
     three_days_ago = date.today() - timedelta(days=3)
     borrowings = Borrowing.objects.filter(
         actual_return_date__isnull=True, borrow_date__lte=three_days_ago
-    ).prefetch_related("books", "user")
+    ).select_related("book", "user")
 
     for borrowing in borrowings:
         try:
@@ -36,7 +36,7 @@ def send_due_today():
     today = date.today()
     borrowings = Borrowing.objects.filter(
         actual_return_date__isnull=True, expected_return=today
-    ).prefetch_related("books", "user")
+    ).select_related("book", "user")
 
     for borrowing in borrowings:
         try:
