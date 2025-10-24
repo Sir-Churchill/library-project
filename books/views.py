@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 
 from books.models import Book
-from books.permissions import IsAdminOrAuthenticatedOrReadOnly
+from books.permissions import IsAdminOrReadOnly
 from books.serializers import BookSerializer, BookListSerializer, BookDetailSerializer
 
 
@@ -19,4 +19,4 @@ class BookViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "list":
             return [permissions.AllowAny()]
-        return [IsAdminOrAuthenticatedOrReadOnly()]
+        return [IsAdminOrReadOnly()]
