@@ -1,4 +1,11 @@
 import stripe
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiResponse,
+    OpenApiParameter,
+    OpenApiExample,
+)
 from rest_framework import viewsets, status
 from rest_framework import mixins
 from rest_framework.permissions import IsAuthenticated
@@ -14,6 +21,27 @@ from payment.serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List payments",
+        description="Returns list of payments. Admins see all payments; users see only their own.",
+        responses={200: PaymentListSerializer},
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve payment",
+        description="Returns detailed info about a specific payment.",
+        responses={
+            200: PaymentDetailSerializer,
+            404: OpenApiResponse(description="Payment not found"),
+        },
+    ),
+    create=extend_schema(
+        summary="Create payment",
+        description="Creates a new payment record for a borrowing (internal use).",
+        request=PaymentSerializer,
+        responses={201: PaymentSerializer},
+    ),
+)
 class PaymentGenericView(
     viewsets.GenericViewSet,
     mixins.RetrieveModelMixin,
@@ -38,6 +66,36 @@ class PaymentGenericView(
         return Payment.objects.none()
 
 
+@extend_schema_view(
+    post=extend_schema(
+        summary="Checkout for borrowing",
+        description="Creates a Stripe Checkout session for a specific borrowing.",
+        parameters=[
+            OpenApiParameter(
+                name="borrowing_id",
+                description="ID of borrowing to pay for",
+                required=True,
+                type=int,
+                location=OpenApiParameter.PATH,
+            )
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Checkout session created",
+                examples=[
+                    OpenApiExample(
+                        "Stripe session",
+                        value={
+                            "session_id": "cs_test_123",
+                            "url": "https://checkout.stripe.com/pay/cs_test_123",
+                        },
+                    )
+                ],
+            ),
+            404: OpenApiResponse(description="Borrowing not found"),
+        },
+    )
+)
 class PaymentCheckoutView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -95,6 +153,7 @@ class PaymentCheckoutView(APIView):
         )
 
 
+@extend_schema(request=None, responses={200: OpenApiResponse(description="Success")})
 class PaymentSuccessView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -118,6 +177,7 @@ class PaymentSuccessView(APIView):
         )
 
 
+@extend_schema(request=None, responses={400: OpenApiResponse(description="Cancelled")})
 class PaymentCanceledView(APIView):
     permission_classes = (IsAuthenticated,)
 
