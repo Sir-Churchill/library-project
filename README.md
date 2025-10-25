@@ -27,8 +27,8 @@ This project is built using modern Python and containerization technologies.
 Start by cloning the project repository and navigating into the folder:
 
 ```bash
-git clone <https://github.com/Sir-Churchill/library-project.git>
-cd <library-project>
+git clone https://github.com/Sir-Churchill/library-project.git
+cd library-project
 ```
 ### ⚙️ Configure Environment Variables
 
